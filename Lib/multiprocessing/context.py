@@ -223,6 +223,10 @@ class Process(process.BaseProcess):
     def _Popen(process_obj):
         return _default_context.get_context().Process._Popen(process_obj)
 
+    @staticmethod
+    def _bootstrap_util():
+        return _default_context.get_context().Process._bootstrap_util()
+
 class DefaultContext(BaseContext):
     Process = Process
 
@@ -283,6 +287,11 @@ if sys.platform != 'win32':
             from .popen_spawn_posix import Popen
             return Popen(process_obj)
 
+        @staticmethod
+        def _bootstrap_util():
+            # Process is spawned, no need to bootstrap util.
+            pass
+
     class ForkServerProcess(process.BaseProcess):
         _start_method = 'forkserver'
         @staticmethod
@@ -325,6 +334,11 @@ else:
         def _Popen(process_obj):
             from .popen_spawn_win32 import Popen
             return Popen(process_obj)
+
+        @staticmethod
+        def _bootstrap_util():
+            # Process is spawned, no need to bootstrap util.
+            pass
 
     class SpawnContext(BaseContext):
         _name = 'spawn'

@@ -5706,6 +5706,41 @@ class TestSyncManagerTypes(unittest.TestCase):
         self.run_worker(self._test_namespace, o)
 
 
+class TestNamedResource(unittest.TestCase):
+
+    def test_global_named_resource_spawn(self):
+        #
+        # Check that global named resources in main module
+        # will not leak by a subprocess, in spawn context.
+        #
+        import tempfile as tf
+        py = tf.NamedTemporaryFile('w', delete=False)
+        try:
+            py.write('''if 1:
+                import multiprocessing as mp
+
+                ctx = mp.get_context('spawn')
+
+                global_resource = ctx.Semaphore()
+
+                def submain(): pass
+
+                if __name__ == '__main__':
+                    p = ctx.Process(target=submain)
+                    p.start()
+                    p.join()
+            ''')
+            py.close()
+
+            p = subprocess.run([sys.executable, py.name],
+                               stderr=subprocess.PIPE,
+                               text=True)
+
+            self.assertNotRegex(p.stderr, 'resource_tracker: There appear to be .* leaked')
+        finally:
+            os.unlink(py.name)
+
+
 class MiscTestCase(unittest.TestCase):
     def test__all__(self):
         # Just make sure names in not_exported are excluded
